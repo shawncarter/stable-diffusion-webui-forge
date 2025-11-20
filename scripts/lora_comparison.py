@@ -361,6 +361,9 @@ class Script(scripts.Script):
                     # Create processing copy
                     p_copy = copy(p)
 
+                    # Prevent auto-saving during process_images() - we'll save after adding banner
+                    p_copy.do_not_save_samples = True
+
                     # Set prompt with LoRA
                     p_copy.prompt = f"{original_prompt}, {lora_prompt}" if original_prompt else lora_prompt
 

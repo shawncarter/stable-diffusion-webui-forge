@@ -296,6 +296,9 @@ class Script(scripts.Script):
                     p_copy = copy(p)
                     p_copy.prompt = prompt
 
+                    # Prevent auto-saving during process_images() - we'll save after adding banner
+                    p_copy.do_not_save_samples = True
+
                     # Override model checkpoint for this generation
                     if not hasattr(p_copy, 'override_settings') or p_copy.override_settings is None:
                         p_copy.override_settings = {}
