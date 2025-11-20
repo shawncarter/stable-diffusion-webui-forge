@@ -242,22 +242,41 @@ class Script(scripts.Script):
         ]
 
     def get_lora_list(self):
-        """Get list of available LoRAs"""
+        """Get list of available LoRAs with folder paths"""
         if not LORA_AVAILABLE:
             return []
         try:
             networks.list_available_networks()
-            return list(networks.available_networks.keys())
+            lora_list = []
+            lora_dir = shared.cmd_opts.lora_dir
+
+            for name, network_on_disk in networks.available_networks.items():
+                # Get relative path from lora_dir
+                full_path = network_on_disk.filename
+                try:
+                    rel_path = os.path.relpath(full_path, lora_dir)
+                    # Remove .safetensors or other extensions for cleaner display
+                    display_name = os.path.splitext(rel_path)[0]
+                    # Normalize path separators for consistency
+                    display_name = display_name.replace(os.sep, '/')
+                    lora_list.append(display_name)
+                except:
+                    # Fallback to just the name if relative path fails
+                    lora_list.append(name)
+
+            return sorted(lora_list)
         except Exception as e:
             print(f"LoRA Comparison: Error getting LoRA list: {e}")
             return []
 
-    def get_lora_triggers(self, lora_name):
+    def get_lora_triggers(self, lora_display_name):
         """Get activation triggers for a LoRA from its metadata"""
         if not LORA_AVAILABLE:
             return ""
         try:
-            lora_on_disk = networks.available_networks.get(lora_name)
+            # Extract basename from display name (folder/name format)
+            lora_basename = os.path.basename(lora_display_name)
+            lora_on_disk = networks.available_networks.get(lora_basename)
             if lora_on_disk and hasattr(lora_on_disk, 'metadata'):
                 # Try to get activation text from metadata
                 if lora_on_disk.metadata:
@@ -267,7 +286,7 @@ class Script(scripts.Script):
                     if activation_text:
                         return str(activation_text)
         except Exception as e:
-            print(f"LoRA Comparison: Could not get triggers for {lora_name}: {e}")
+            print(f"LoRA Comparison: Could not get triggers for {lora_display_name}: {e}")
         return ""
 
     def run(self, p, lora_checkboxes, model_checkboxes, lora_weight,
@@ -303,20 +322,22 @@ class Script(scripts.Script):
 
         try:
             # Loop through each LoRA
-            for lora_idx, lora_name in enumerate(lora_checkboxes):
+            for lora_idx, lora_display_name in enumerate(lora_checkboxes):
                 if state.interrupted:
                     break
+
+                # Extract basename for LoRA loading (networks.available_networks uses basename)
+                lora_basename = os.path.basename(lora_display_name)
 
                 # Get activation triggers for this LoRA
                 triggers = ""
                 if use_triggers:
-                    triggers = self.get_lora_triggers(lora_name)
+                    triggers = self.get_lora_triggers(lora_display_name)
                     if triggers:
                         print(f"  Using triggers: {triggers[:50]}...")
 
-                # Build prompt with LoRA and triggers
-                lora_alias = lora_name
-                lora_prompt = f"<lora:{lora_alias}:{lora_weight}>"
+                # Build prompt with LoRA and triggers (use basename for <lora:...>)
+                lora_prompt = f"<lora:{lora_basename}:{lora_weight}>"
                 if triggers:
                     lora_prompt += f" {triggers}"
 
@@ -329,7 +350,7 @@ class Script(scripts.Script):
                     state.job_no = current_iteration
                     state.job = f"LoRA {lora_idx + 1}/{len(lora_checkboxes)}, Model {model_idx + 1}/{len(model_checkboxes)}"
 
-                    print(f"  [{current_iteration}/{total_iterations}] Testing {lora_name} with {model_name}")
+                    print(f"  [{current_iteration}/{total_iterations}] Testing {lora_display_name} with {model_name}")
 
                     # Get checkpoint info
                     checkpoint_info = sd_models.get_closet_checkpoint_match(model_name)
@@ -359,7 +380,8 @@ class Script(scripts.Script):
 
                         for img_idx, img in enumerate(processed.images):
                             if banner_enabled and isinstance(img, Image.Image):
-                                lora_display = lora_name.split('.')[0]  # Remove extension
+                                # Use display name (already has folder, no extension)
+                                lora_display = lora_display_name
                                 model_display = checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name
                                 img = add_lora_banner(img, lora_display, model_display, position=banner_position)
 
@@ -367,7 +389,7 @@ class Script(scripts.Script):
                             all_prompts.append(p_copy.prompt)
                             all_seeds.append(processed.seed if hasattr(processed, 'seed') else p_copy.seed)
 
-                            infotext = f"LoRA: {lora_name} (weight: {lora_weight})\n"
+                            infotext = f"LoRA: {lora_display_name} (weight: {lora_weight})\n"
                             infotext += f"Model: {checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name}\n"
                             if hasattr(processed, 'infotexts') and img_idx < len(processed.infotexts):
                                 infotext += processed.infotexts[img_idx]
@@ -375,7 +397,7 @@ class Script(scripts.Script):
 
                     except Exception as e:
                         print(f"    Error: {e}")
-                        errors.report(f"LoRA Comparison: Failed with {lora_name} @ {model_name}", exc_info=True)
+                        errors.report(f"LoRA Comparison: Failed with {lora_display_name} @ {model_name}", exc_info=True)
                         continue
 
         finally:
