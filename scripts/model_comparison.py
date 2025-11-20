@@ -35,11 +35,13 @@ def add_model_banner(image, model_name, position="bottom", font_size=None, paddi
     Returns:
         PIL Image with banner
     """
+    print(f"      add_model_banner called: '{model_name}', image size: {image.size}, mode: {image.mode}")
     # Create a copy and convert to RGBA for semi-transparent drawing
     img = image.copy()
     original_mode = img.mode
     if img.mode != 'RGBA':
         img = img.convert('RGBA')
+        print(f"      Converted from {original_mode} to RGBA")
 
     draw = ImageDraw.Draw(img)
 
@@ -77,11 +79,14 @@ def add_model_banner(image, model_name, position="bottom", font_size=None, paddi
 
     # Draw text
     draw.text((text_x, text_y), model_name, font=font, fill=text_color)
+    print(f"      Banner drawn at position {position}, rectangle: {(0, banner_y, banner_width, banner_y + banner_height)}")
 
     # Convert back to original mode if needed
     if original_mode != 'RGBA':
         img = img.convert(original_mode)
+        print(f"      Converted back to {original_mode}")
 
+    print(f"      Returning bannered image, size: {img.size}, mode: {img.mode}")
     return img
 
 
@@ -298,16 +303,22 @@ class Script(scripts.Script):
 
                         # Process each generated image
                         for img_idx, img in enumerate(processed.images):
+                            print(f"    Image type: {type(img)}, Is PIL Image: {isinstance(img, Image.Image)}")
                             # Add banner if enabled
-                            if banner_enabled and isinstance(img, Image.Image):
-                                banner_text = checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name
-                                font_size = banner_font_size if banner_font_size > 0 else None
-                                img = add_model_banner(
-                                    img,
-                                    banner_text,
-                                    position=banner_position,
-                                    font_size=font_size
-                                )
+                            if banner_enabled:
+                                if isinstance(img, Image.Image):
+                                    banner_text = checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name
+                                    font_size = banner_font_size if banner_font_size > 0 else None
+                                    print(f"    Adding banner: {banner_text}")
+                                    img = add_model_banner(
+                                        img,
+                                        banner_text,
+                                        position=banner_position,
+                                        font_size=font_size
+                                    )
+                                    print(f"    Banner added, image mode: {img.mode}")
+                                else:
+                                    print(f"    WARNING: Image is not a PIL Image, cannot add banner!")
 
                             all_images.append(img)
                             all_prompts.append(prompt)
