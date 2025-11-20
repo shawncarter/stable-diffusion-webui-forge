@@ -77,7 +77,7 @@ def add_model_banner(image, model_name, position="bottom", font_size=None, paddi
     return img
 
 
-class ModelComparisonScript(scripts.Script):
+class Script(scripts.Script):
     def title(self):
         return "Model Comparison"
 

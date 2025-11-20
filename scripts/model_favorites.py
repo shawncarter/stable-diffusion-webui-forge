@@ -13,7 +13,7 @@ from modules import sd_models, shared
 from modules.ui_components import ToolButton
 
 
-class ModelFavoritesManager(scripts.Script):
+class Script(scripts.Script):
     def __init__(self):
         super().__init__()
         self.presets_file = os.path.join(shared.data_path, "model_presets.json")

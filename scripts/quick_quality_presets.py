@@ -8,7 +8,7 @@ import modules.scripts as scripts
 from modules import shared
 
 
-class QuickQualityPresets(scripts.Script):
+class Script(scripts.Script):
     def title(self):
         return "Quick Quality Presets"
 
