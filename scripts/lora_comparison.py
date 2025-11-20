@@ -29,7 +29,11 @@ except:
 def add_lora_banner(image, lora_name, model_name, position="bottom", font_size=None, padding=10):
     """Add banner with LoRA and model name to image"""
     img = image.copy()
-    draw = ImageDraw.Draw(img, 'RGBA')
+    original_mode = img.mode
+    if img.mode != 'RGBA':
+        img = img.convert('RGBA')
+
+    draw = ImageDraw.Draw(img)
 
     if font_size is None:
         font_size = max(12, min(32, img.width // 40))
@@ -61,6 +65,10 @@ def add_lora_banner(image, lora_name, model_name, position="bottom", font_size=N
 
     text_x = (banner_width - text_width) // 2
     draw.text((text_x, text_y), banner_text, font=font, fill=(255, 255, 255, 255))
+
+    # Convert back to original mode if needed
+    if original_mode != 'RGBA':
+        img = img.convert(original_mode)
 
     return img
 
@@ -354,13 +362,17 @@ class Script(scripts.Script):
         finally:
             print(f"\nLoRA Comparison: Complete")
 
-        # Create grid if requested
-        if create_grid and len(all_images) > 1:
+        # Create grid if requested (minimum 20 images for 5x4 grid)
+        if create_grid and len(all_images) >= 20:
+            print(f"LoRA Comparison: Creating comparison grid with {len(all_images)} images...")
             grid = images.image_grid(all_images, rows=None)
             all_images.insert(0, grid)
             all_prompts.insert(0, "LoRA Comparison Grid")
             all_seeds.insert(0, -1)
             all_infotexts.insert(0, f"LoRA Comparison Grid: {len(lora_checkboxes)} LoRAs x {len(model_checkboxes)} models")
+            print(f"LoRA Comparison: Grid created successfully")
+        elif create_grid and len(all_images) > 1:
+            print(f"LoRA Comparison: Skipping grid creation - need at least 20 images for meaningful comparison (have {len(all_images)})")
 
         result = Processed(
             p,

@@ -35,9 +35,13 @@ def add_model_banner(image, model_name, position="bottom", font_size=None, paddi
     Returns:
         PIL Image with banner
     """
-    # Create a copy to avoid modifying the original
+    # Create a copy and convert to RGBA for semi-transparent drawing
     img = image.copy()
-    draw = ImageDraw.Draw(img, 'RGBA')
+    original_mode = img.mode
+    if img.mode != 'RGBA':
+        img = img.convert('RGBA')
+
+    draw = ImageDraw.Draw(img)
 
     # Auto-calculate font size based on image width if not specified
     if font_size is None:
@@ -73,6 +77,10 @@ def add_model_banner(image, model_name, position="bottom", font_size=None, paddi
 
     # Draw text
     draw.text((text_x, text_y), model_name, font=font, fill=text_color)
+
+    # Convert back to original mode if needed
+    if original_mode != 'RGBA':
+        img = img.convert(original_mode)
 
     return img
 
@@ -323,13 +331,17 @@ class Script(scripts.Script):
             print(f"\nModel Comparison: Complete - original model will be restored on next generation")
             # The model will automatically revert when the next generation without override_settings runs
 
-        # Create grid if requested
-        if create_grid and len(all_images) > 1:
+        # Create grid if requested (minimum 20 images for 5x4 grid)
+        if create_grid and len(all_images) >= 20:
+            print(f"Model Comparison: Creating comparison grid with {len(all_images)} images...")
             grid = images.image_grid(all_images, rows=None)
             all_images.insert(0, grid)
             all_prompts.insert(0, "Comparison Grid")
             all_seeds.insert(0, -1)
             all_infotexts.insert(0, f"Model Comparison Grid: {len(model_checkboxes)} models x {len(prompts)} prompts")
+            print(f"Model Comparison: Grid created successfully")
+        elif create_grid and len(all_images) > 1:
+            print(f"Model Comparison: Skipping grid creation - need at least 20 images for meaningful comparison (have {len(all_images)})")
 
         # Create result object
         result = Processed(
