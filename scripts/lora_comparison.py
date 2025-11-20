@@ -68,7 +68,14 @@ def add_lora_banner(image, lora_name, model_name, position="bottom", font_size=N
 
     # Convert back to original mode if needed
     if original_mode != 'RGBA':
-        img = img.convert(original_mode)
+        # If converting back to RGB, need to handle alpha channel properly
+        if original_mode == 'RGB':
+            # Create RGB image by compositing RGBA onto white background
+            rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+            rgb_img.paste(img, mask=img.split()[3])  # Use alpha channel as mask
+            img = rgb_img
+        else:
+            img = img.convert(original_mode)
 
     return img
 

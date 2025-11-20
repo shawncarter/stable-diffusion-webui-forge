@@ -83,7 +83,15 @@ def add_model_banner(image, model_name, position="bottom", font_size=None, paddi
 
     # Convert back to original mode if needed
     if original_mode != 'RGBA':
-        img = img.convert(original_mode)
+        # If converting back to RGB, need to handle alpha channel properly
+        if original_mode == 'RGB':
+            # Create RGB image by compositing RGBA onto white background
+            rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+            rgb_img.paste(img, mask=img.split()[3])  # Use alpha channel as mask
+            img = rgb_img
+            print(f"      Composited RGBA onto RGB background")
+        else:
+            img = img.convert(original_mode)
         print(f"      Converted back to {original_mode}")
 
     print(f"      Returning bannered image, size: {img.size}, mode: {img.mode}")
