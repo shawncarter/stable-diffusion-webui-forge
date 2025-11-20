@@ -269,6 +269,9 @@ class Script(scripts.Script):
         total_iterations = len(lora_checkboxes) * len(model_checkboxes)
         current_iteration = 0
 
+        # Set the job count for progress tracking
+        state.job_count = total_iterations
+
         print(f"LoRA Comparison: Testing {len(lora_checkboxes)} LoRAs against {len(model_checkboxes)} models ({total_iterations} total images)")
 
         try:
@@ -296,7 +299,8 @@ class Script(scripts.Script):
                         break
 
                     current_iteration += 1
-                    state.job = f"LoRA Comparison: LoRA {lora_idx + 1}/{len(lora_checkboxes)}, Model {model_idx + 1}/{len(model_checkboxes)}"
+                    state.job_no = current_iteration
+                    state.job = f"LoRA {lora_idx + 1}/{len(lora_checkboxes)}, Model {model_idx + 1}/{len(model_checkboxes)}"
 
                     print(f"  [{current_iteration}/{total_iterations}] Testing {lora_name} with {model_name}")
 

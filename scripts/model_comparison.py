@@ -237,6 +237,9 @@ class Script(scripts.Script):
         total_iterations = len(model_checkboxes) * len(prompts)
         current_iteration = 0
 
+        # Set the job count for progress tracking
+        state.job_count = total_iterations
+
         print(f"Model Comparison: Starting comparison with {len(model_checkboxes)} models and {len(prompts)} prompts ({total_iterations} total images)")
 
         try:
@@ -259,7 +262,8 @@ class Script(scripts.Script):
                         break
 
                     current_iteration += 1
-                    state.job = f"Model Comparison: Model {model_idx + 1}/{len(model_checkboxes)}, Prompt {prompt_idx + 1}/{len(prompts)}"
+                    state.job_no = current_iteration
+                    state.job = f"Model {model_idx + 1}/{len(model_checkboxes)}, Prompt {prompt_idx + 1}/{len(prompts)}"
 
                     # Create a copy of the processing parameters
                     p_copy = copy(p)
