@@ -188,14 +188,26 @@ class Script(scripts.Script):
         def update_model_list():
             return gr.update(choices=sd_models.checkpoint_tiles(use_short=False))
 
-        def select_all_loras():
-            return gr.update(value=self.get_lora_list())
+        def select_all_loras(filter_text):
+            """Select all LoRAs (filtered if filter is active)"""
+            if filter_text:
+                all_loras = self.get_lora_list()
+                filtered = [l for l in all_loras if filter_text.lower() in l.lower()]
+                return gr.update(value=filtered)
+            else:
+                return gr.update(value=self.get_lora_list())
 
         def deselect_all_loras():
             return gr.update(value=[])
 
-        def select_all_models():
-            return gr.update(value=sd_models.checkpoint_tiles(use_short=False))
+        def select_all_models(filter_text):
+            """Select all models (filtered if filter is active)"""
+            if filter_text:
+                all_models = sd_models.checkpoint_tiles(use_short=False)
+                filtered = [m for m in all_models if filter_text.lower() in m.lower()]
+                return gr.update(value=filtered)
+            else:
+                return gr.update(value=sd_models.checkpoint_tiles(use_short=False))
 
         def deselect_all_models():
             return gr.update(value=[])
@@ -217,9 +229,9 @@ class Script(scripts.Script):
         # Wire up events
         refresh_loras_btn.click(fn=update_lora_list, outputs=[lora_checkboxes])
         refresh_models_btn.click(fn=update_model_list, outputs=[model_checkboxes])
-        select_all_loras_btn.click(fn=select_all_loras, outputs=[lora_checkboxes])
+        select_all_loras_btn.click(fn=select_all_loras, inputs=[lora_filter], outputs=[lora_checkboxes])
         deselect_all_loras_btn.click(fn=deselect_all_loras, outputs=[lora_checkboxes])
-        select_all_models_btn.click(fn=select_all_models, outputs=[model_checkboxes])
+        select_all_models_btn.click(fn=select_all_models, inputs=[model_filter], outputs=[model_checkboxes])
         deselect_all_models_btn.click(fn=deselect_all_models, outputs=[model_checkboxes])
         lora_filter.change(fn=filter_loras, inputs=[lora_filter], outputs=[lora_checkboxes])
         model_filter.change(fn=filter_models, inputs=[model_filter], outputs=[model_checkboxes])
@@ -369,17 +381,25 @@ class Script(scripts.Script):
         finally:
             print(f"\nLoRA Comparison: Complete")
 
-        # Create grid if requested (minimum 20 images for 5x4 grid)
-        if create_grid and len(all_images) >= 20:
+        # Create grid if requested (minimum 4 images for 2x2 grid)
+        print(f"LoRA Comparison: Grid creation enabled: {create_grid}, images count: {len(all_images)}")
+        if create_grid and len(all_images) >= 4:
             print(f"LoRA Comparison: Creating comparison grid with {len(all_images)} images...")
-            grid = images.image_grid(all_images, rows=None)
-            all_images.insert(0, grid)
-            all_prompts.insert(0, "LoRA Comparison Grid")
-            all_seeds.insert(0, -1)
-            all_infotexts.insert(0, f"LoRA Comparison Grid: {len(lora_checkboxes)} LoRAs x {len(model_checkboxes)} models")
-            print(f"LoRA Comparison: Grid created successfully")
+            try:
+                grid = images.image_grid(all_images, rows=None)
+                print(f"LoRA Comparison: Grid created, size: {grid.size}, mode: {grid.mode}")
+                all_images.insert(0, grid)
+                all_prompts.insert(0, "LoRA Comparison Grid")
+                all_seeds.insert(0, -1)
+                all_infotexts.insert(0, f"LoRA Comparison Grid: {len(lora_checkboxes)} LoRAs x {len(model_checkboxes)} models")
+                print(f"LoRA Comparison: Grid inserted at position 0, total images now: {len(all_images)}")
+            except Exception as e:
+                print(f"LoRA Comparison: Error creating grid: {e}")
+                errors.report(f"LoRA Comparison: Failed to create grid", exc_info=True)
         elif create_grid and len(all_images) > 1:
-            print(f"LoRA Comparison: Skipping grid creation - need at least 20 images for meaningful comparison (have {len(all_images)})")
+            print(f"LoRA Comparison: Skipping grid creation - need at least 4 images for grid (have {len(all_images)})")
+        elif create_grid:
+            print(f"LoRA Comparison: Grid creation enabled but only {len(all_images)} image(s) generated")
 
         result = Processed(
             p,

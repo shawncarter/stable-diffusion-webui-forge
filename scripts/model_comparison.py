@@ -193,8 +193,14 @@ class Script(scripts.Script):
         def update_model_list():
             return gr.update(choices=sd_models.checkpoint_tiles(use_short=False))
 
-        def select_all_models():
-            return gr.update(value=sd_models.checkpoint_tiles(use_short=False))
+        def select_all_models(filter_text):
+            """Select all models (filtered if filter is active)"""
+            if filter_text:
+                all_models = sd_models.checkpoint_tiles(use_short=False)
+                filtered = [m for m in all_models if filter_text.lower() in m.lower()]
+                return gr.update(value=filtered)
+            else:
+                return gr.update(value=sd_models.checkpoint_tiles(use_short=False))
 
         def deselect_all_models():
             return gr.update(value=[])
@@ -207,7 +213,7 @@ class Script(scripts.Script):
             return gr.update(choices=filtered)
 
         refresh_models_btn.click(fn=update_model_list, outputs=[model_checkboxes])
-        select_all_btn.click(fn=select_all_models, outputs=[model_checkboxes])
+        select_all_btn.click(fn=select_all_models, inputs=[model_filter], outputs=[model_checkboxes])
         deselect_all_btn.click(fn=deselect_all_models, outputs=[model_checkboxes])
         model_filter.change(fn=filter_models, inputs=[model_filter], outputs=[model_checkboxes])
 
@@ -350,17 +356,25 @@ class Script(scripts.Script):
             print(f"\nModel Comparison: Complete - original model will be restored on next generation")
             # The model will automatically revert when the next generation without override_settings runs
 
-        # Create grid if requested (minimum 20 images for 5x4 grid)
-        if create_grid and len(all_images) >= 20:
+        # Create grid if requested (minimum 4 images for 2x2 grid)
+        print(f"Model Comparison: Grid creation enabled: {create_grid}, images count: {len(all_images)}")
+        if create_grid and len(all_images) >= 4:
             print(f"Model Comparison: Creating comparison grid with {len(all_images)} images...")
-            grid = images.image_grid(all_images, rows=None)
-            all_images.insert(0, grid)
-            all_prompts.insert(0, "Comparison Grid")
-            all_seeds.insert(0, -1)
-            all_infotexts.insert(0, f"Model Comparison Grid: {len(model_checkboxes)} models x {len(prompts)} prompts")
-            print(f"Model Comparison: Grid created successfully")
+            try:
+                grid = images.image_grid(all_images, rows=None)
+                print(f"Model Comparison: Grid created, size: {grid.size}, mode: {grid.mode}")
+                all_images.insert(0, grid)
+                all_prompts.insert(0, "Comparison Grid")
+                all_seeds.insert(0, -1)
+                all_infotexts.insert(0, f"Model Comparison Grid: {len(model_checkboxes)} models x {len(prompts)} prompts")
+                print(f"Model Comparison: Grid inserted at position 0, total images now: {len(all_images)}")
+            except Exception as e:
+                print(f"Model Comparison: Error creating grid: {e}")
+                errors.report(f"Model Comparison: Failed to create grid", exc_info=True)
         elif create_grid and len(all_images) > 1:
-            print(f"Model Comparison: Skipping grid creation - need at least 20 images for meaningful comparison (have {len(all_images)})")
+            print(f"Model Comparison: Skipping grid creation - need at least 4 images for grid (have {len(all_images)})")
+        elif create_grid:
+            print(f"Model Comparison: Grid creation enabled but only {len(all_images)} image(s) generated")
 
         # Create result object
         result = Processed(
