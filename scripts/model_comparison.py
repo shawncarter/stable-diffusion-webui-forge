@@ -81,133 +81,122 @@ class Script(scripts.Script):
     def title(self):
         return "Model Comparison"
 
-    def show(self, is_img2img):
-        return scripts.AlwaysVisible
-
     def ui(self, is_img2img):
-        with gr.Accordion(open=False, label="Model Comparison", elem_id="model_comparison_accordion"):
-            with gr.Row():
-                enabled = gr.Checkbox(label="Enable Model Comparison", value=False, elem_id="model_comparison_enabled")
+        with gr.Row():
+            gr.HTML("<p>Select models to compare. The same prompt(s) will be run through each selected model.</p>")
 
-            with gr.Row():
-                gr.HTML("<p>Select models to compare. The same prompt(s) will be run through each selected model.</p>")
-
-            with gr.Row():
-                with gr.Column(scale=3):
-                    # Model selection
-                    model_filter = gr.Textbox(
-                        label="Filter models (optional)",
-                        placeholder="Enter text to filter model list",
-                        elem_id="model_comparison_filter"
-                    )
-
-                    model_checkboxes = gr.CheckboxGroup(
-                        label="Select Models",
-                        choices=sd_models.checkpoint_tiles(use_short=False),
-                        value=[],
-                        elem_id="model_comparison_models",
-                        interactive=True
-                    )
-
-                    with gr.Row():
-                        select_all_btn = gr.Button("Select All", size="sm")
-                        deselect_all_btn = gr.Button("Deselect All", size="sm")
-                        refresh_models_btn = ToolButton(value="\U0001f504", elem_id="model_comparison_refresh")
-
-                with gr.Column(scale=2):
-                    # Prompt batch input
-                    prompt_batch = gr.Textbox(
-                        label="Batch Prompts (one per line)",
-                        placeholder="Enter multiple prompts, one per line.\nEach will be run against all selected models.",
-                        lines=10,
-                        elem_id="model_comparison_prompts"
-                    )
-
-                    gr.HTML("<p><b>Note:</b> Leave empty to use the main prompt above.</p>")
-
-            with gr.Row():
-                with gr.Column():
-                    # Seed options
-                    seed_mode = gr.Radio(
-                        label="Seed Mode",
-                        choices=["Use same seed for all", "Random seed for each"],
-                        value="Use same seed for all",
-                        elem_id="model_comparison_seed_mode"
-                    )
-
-                    fixed_seed = gr.Number(
-                        label="Fixed Seed (leave -1 for random)",
-                        value=-1,
-                        elem_id="model_comparison_fixed_seed"
-                    )
-
-                with gr.Column():
-                    # Banner options
-                    banner_enabled = gr.Checkbox(label="Add model name banner", value=True)
-                    banner_position = gr.Radio(
-                        label="Banner Position",
-                        choices=["top", "bottom"],
-                        value="bottom",
-                        elem_id="model_comparison_banner_pos"
-                    )
-                    banner_font_size = gr.Slider(
-                        label="Banner Font Size",
-                        minimum=8,
-                        maximum=64,
-                        value=0,
-                        step=1,
-                        elem_id="model_comparison_font_size"
-                    )
-                    gr.HTML("<p><small>Font size 0 = auto-calculated based on image width</small></p>")
-
-            with gr.Row():
-                create_grid = gr.Checkbox(
-                    label="Create comparison grid",
-                    value=True,
-                    elem_id="model_comparison_grid"
+        with gr.Row():
+            with gr.Column(scale=3):
+                # Model selection
+                model_filter = gr.Textbox(
+                    label="Filter models (optional)",
+                    placeholder="Enter text to filter model list",
+                    elem_id=self.elem_id("filter")
                 )
-                grid_columns = gr.Slider(
-                    label="Grid columns",
-                    minimum=1,
-                    maximum=10,
-                    value=3,
+
+                model_checkboxes = gr.CheckboxGroup(
+                    label="Select Models",
+                    choices=sd_models.checkpoint_tiles(use_short=False),
+                    value=[],
+                    elem_id=self.elem_id("models"),
+                    interactive=True
+                )
+
+                with gr.Row():
+                    select_all_btn = gr.Button("Select All", size="sm")
+                    deselect_all_btn = gr.Button("Deselect All", size="sm")
+                    refresh_models_btn = ToolButton(value="\U0001f504", elem_id=self.elem_id("refresh"))
+
+            with gr.Column(scale=2):
+                # Prompt batch input
+                prompt_batch = gr.Textbox(
+                    label="Batch Prompts (one per line)",
+                    placeholder="Enter multiple prompts, one per line.\nEach will be run against all selected models.",
+                    lines=10,
+                    elem_id=self.elem_id("prompts")
+                )
+
+                gr.HTML("<p><b>Note:</b> Leave empty to use the main prompt above.</p>")
+
+        with gr.Row():
+            with gr.Column():
+                # Seed options
+                seed_mode = gr.Radio(
+                    label="Seed Mode",
+                    choices=["Use same seed for all", "Random seed for each"],
+                    value="Use same seed for all",
+                    elem_id=self.elem_id("seed_mode")
+                )
+
+                fixed_seed = gr.Number(
+                    label="Fixed Seed (leave -1 for random)",
+                    value=-1,
+                    elem_id=self.elem_id("fixed_seed")
+                )
+
+            with gr.Column():
+                # Banner options
+                banner_enabled = gr.Checkbox(label="Add model name banner", value=True)
+                banner_position = gr.Radio(
+                    label="Banner Position",
+                    choices=["top", "bottom"],
+                    value="bottom",
+                    elem_id=self.elem_id("banner_pos")
+                )
+                banner_font_size = gr.Slider(
+                    label="Banner Font Size",
+                    minimum=8,
+                    maximum=64,
+                    value=0,
                     step=1,
-                    elem_id="model_comparison_grid_cols"
+                    elem_id=self.elem_id("font_size")
                 )
+                gr.HTML("<p><small>Font size 0 = auto-calculated based on image width</small></p>")
 
-            # Event handlers
-            def update_model_list():
+        with gr.Row():
+            create_grid = gr.Checkbox(
+                label="Create comparison grid",
+                value=True,
+                elem_id=self.elem_id("grid")
+            )
+            grid_columns = gr.Slider(
+                label="Grid columns",
+                minimum=1,
+                maximum=10,
+                value=3,
+                step=1,
+                elem_id=self.elem_id("grid_cols")
+            )
+
+        # Event handlers
+        def update_model_list():
+            return gr.update(choices=sd_models.checkpoint_tiles(use_short=False))
+
+        def select_all_models():
+            return gr.update(value=sd_models.checkpoint_tiles(use_short=False))
+
+        def deselect_all_models():
+            return gr.update(value=[])
+
+        def filter_models(filter_text):
+            if not filter_text:
                 return gr.update(choices=sd_models.checkpoint_tiles(use_short=False))
+            all_models = sd_models.checkpoint_tiles(use_short=False)
+            filtered = [m for m in all_models if filter_text.lower() in m.lower()]
+            return gr.update(choices=filtered)
 
-            def select_all_models():
-                return gr.update(value=sd_models.checkpoint_tiles(use_short=False))
-
-            def deselect_all_models():
-                return gr.update(value=[])
-
-            def filter_models(filter_text):
-                if not filter_text:
-                    return gr.update(choices=sd_models.checkpoint_tiles(use_short=False))
-                all_models = sd_models.checkpoint_tiles(use_short=False)
-                filtered = [m for m in all_models if filter_text.lower() in m.lower()]
-                return gr.update(choices=filtered)
-
-            refresh_models_btn.click(fn=update_model_list, outputs=[model_checkboxes])
-            select_all_btn.click(fn=select_all_models, outputs=[model_checkboxes])
-            deselect_all_btn.click(fn=deselect_all_models, outputs=[model_checkboxes])
-            model_filter.change(fn=filter_models, inputs=[model_filter], outputs=[model_checkboxes])
+        refresh_models_btn.click(fn=update_model_list, outputs=[model_checkboxes])
+        select_all_btn.click(fn=select_all_models, outputs=[model_checkboxes])
+        deselect_all_btn.click(fn=deselect_all_models, outputs=[model_checkboxes])
+        model_filter.change(fn=filter_models, inputs=[model_filter], outputs=[model_checkboxes])
 
         return [
-            enabled, model_checkboxes, prompt_batch, seed_mode, fixed_seed,
+            model_checkboxes, prompt_batch, seed_mode, fixed_seed,
             banner_enabled, banner_position, banner_font_size, create_grid, grid_columns
         ]
 
-    def run(self, p, enabled, model_checkboxes, prompt_batch, seed_mode, fixed_seed,
+    def run(self, p, model_checkboxes, prompt_batch, seed_mode, fixed_seed,
             banner_enabled, banner_position, banner_font_size, create_grid, grid_columns):
-
-        # If not enabled, return None to allow normal processing
-        if not enabled:
-            return None
 
         # Validation
         if not model_checkboxes or len(model_checkboxes) == 0:
@@ -262,17 +251,6 @@ class Script(scripts.Script):
                 checkpoint_info = sd_models.get_closet_checkpoint_match(model_name)
                 if checkpoint_info is None:
                     print(f"Model Comparison: Could not find checkpoint: {model_name}, skipping...")
-                    continue
-
-                # Switch to this model using override_settings (like xyz_grid does)
-                try:
-                    # Use override_settings which will trigger model reload during generation
-                    if not hasattr(p, 'override_settings') or p.override_settings is None:
-                        p.override_settings = {}
-                    # Note: This will be applied per-generation in the loop below
-                except Exception as e:
-                    print(f"Model Comparison: Error preparing model {model_name}: {e}")
-                    errors.report(f"Model Comparison: Failed to prepare {model_name}", exc_info=True)
                     continue
 
                 # Loop through each prompt

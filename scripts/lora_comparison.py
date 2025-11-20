@@ -69,22 +69,16 @@ class Script(scripts.Script):
     def title(self):
         return "LoRA Comparison"
 
-    def show(self, is_img2img):
-        return scripts.AlwaysVisible
-
     def ui(self, is_img2img):
-        with gr.Accordion(open=False, label="LoRA Comparison", elem_id="lora_comparison_accordion"):
-            if not LORA_AVAILABLE:
-                gr.HTML("<p style='color: red;'><b>LoRA module not available.</b> This feature requires the LoRA extension to be loaded.</p>")
-                return []
+        if not LORA_AVAILABLE:
+            gr.HTML("<p style='color: red;'><b>LoRA module not available.</b> This feature requires the LoRA extension to be loaded.</p>")
+            return []
 
+        with gr.Row():
             gr.HTML("""
                 <p><b>LoRA Comparison</b> - Test multiple LoRAs against multiple checkpoint models</p>
                 <p>Each LoRA will be tested with its activation triggers (if defined) against all selected models.</p>
             """)
-
-            with gr.Row():
-                enabled = gr.Checkbox(label="Enable LoRA Comparison", value=False, elem_id="lora_comparison_enabled")
 
             with gr.Row():
                 with gr.Column(scale=2):
@@ -93,130 +87,130 @@ class Script(scripts.Script):
                     lora_filter = gr.Textbox(
                         label="Filter LoRAs",
                         placeholder="Enter text to filter LoRA list",
-                        elem_id="lora_comparison_filter"
-                    )
-
-                    lora_checkboxes = gr.CheckboxGroup(
-                        label="Select LoRAs to Test",
-                        choices=self.get_lora_list(),
-                        value=[],
-                        elem_id="lora_comparison_loras",
-                        interactive=True
-                    )
-
-                    with gr.Row():
-                        select_all_loras_btn = gr.Button("Select All", size="sm")
-                        deselect_all_loras_btn = gr.Button("Deselect All", size="sm")
-                        refresh_loras_btn = ToolButton(value="\U0001f504", elem_id="lora_comparison_refresh_loras")
-
-                    use_triggers = gr.Checkbox(
-                        label="Use activation triggers from LoRA metadata",
-                        value=True,
-                        elem_id="lora_comparison_use_triggers"
-                    )
-                    gr.HTML("<p><small>If enabled, will automatically add activation text from LoRA metadata to prompts</small></p>")
-
-                with gr.Column(scale=2):
-                    gr.HTML("<h4>Select Checkpoint Models</h4>")
-
-                    model_filter = gr.Textbox(
-                        label="Filter Models",
-                        placeholder="Enter text to filter model list",
-                        elem_id="lora_comparison_model_filter"
-                    )
-
-                    model_checkboxes = gr.CheckboxGroup(
-                        label="Select Models",
-                        choices=sd_models.checkpoint_tiles(use_short=False),
-                        value=[],
-                        elem_id="lora_comparison_models",
-                        interactive=True
-                    )
-
-                    with gr.Row():
-                        select_all_models_btn = gr.Button("Select All", size="sm")
-                        deselect_all_models_btn = gr.Button("Deselect All", size="sm")
-                        refresh_models_btn = ToolButton(value="\U0001f504", elem_id="lora_comparison_refresh_models")
-
-            with gr.Row():
-                with gr.Column():
-                    lora_weight = gr.Slider(
-                        label="LoRA Weight",
-                        minimum=0.0,
-                        maximum=2.0,
-                        value=1.0,
-                        step=0.05,
-                        elem_id="lora_comparison_weight"
-                    )
-
-                    seed_mode = gr.Radio(
-                        label="Seed Mode",
-                        choices=["Use same seed for all", "Random seed for each"],
-                        value="Use same seed for all",
-                        elem_id="lora_comparison_seed_mode"
-                    )
-
-                with gr.Column():
-                    banner_enabled = gr.Checkbox(label="Add LoRA/Model banner", value=True)
-                    banner_position = gr.Radio(
-                        label="Banner Position",
-                        choices=["top", "bottom"],
-                        value="bottom",
-                        elem_id="lora_comparison_banner_pos"
-                    )
-
-            with gr.Row():
-                create_grid = gr.Checkbox(
-                    label="Create comparison grid",
-                    value=True,
-                    elem_id="lora_comparison_grid"
+                    elem_id="lora_comparison_filter"
                 )
 
-            # Event handlers
-            def update_lora_list():
+                lora_checkboxes = gr.CheckboxGroup(
+                    label="Select LoRAs to Test",
+                    choices=self.get_lora_list(),
+                    value=[],
+                    elem_id="lora_comparison_loras",
+                    interactive=True
+                )
+
+                with gr.Row():
+                    select_all_loras_btn = gr.Button("Select All", size="sm")
+                    deselect_all_loras_btn = gr.Button("Deselect All", size="sm")
+                    refresh_loras_btn = ToolButton(value="\U0001f504", elem_id="lora_comparison_refresh_loras")
+
+                use_triggers = gr.Checkbox(
+                    label="Use activation triggers from LoRA metadata",
+                    value=True,
+                    elem_id="lora_comparison_use_triggers"
+                )
+                gr.HTML("<p><small>If enabled, will automatically add activation text from LoRA metadata to prompts</small></p>")
+
+            with gr.Column(scale=2):
+                gr.HTML("<h4>Select Checkpoint Models</h4>")
+
+                model_filter = gr.Textbox(
+                    label="Filter Models",
+                    placeholder="Enter text to filter model list",
+                    elem_id="lora_comparison_model_filter"
+                )
+
+                model_checkboxes = gr.CheckboxGroup(
+                    label="Select Models",
+                    choices=sd_models.checkpoint_tiles(use_short=False),
+                    value=[],
+                    elem_id="lora_comparison_models",
+                    interactive=True
+                )
+
+                with gr.Row():
+                    select_all_models_btn = gr.Button("Select All", size="sm")
+                    deselect_all_models_btn = gr.Button("Deselect All", size="sm")
+                    refresh_models_btn = ToolButton(value="\U0001f504", elem_id="lora_comparison_refresh_models")
+
+        with gr.Row():
+            with gr.Column():
+                lora_weight = gr.Slider(
+                    label="LoRA Weight",
+                    minimum=0.0,
+                    maximum=2.0,
+                    value=1.0,
+                    step=0.05,
+                    elem_id="lora_comparison_weight"
+                )
+
+                seed_mode = gr.Radio(
+                    label="Seed Mode",
+                    choices=["Use same seed for all", "Random seed for each"],
+                    value="Use same seed for all",
+                    elem_id="lora_comparison_seed_mode"
+                )
+
+            with gr.Column():
+                banner_enabled = gr.Checkbox(label="Add LoRA/Model banner", value=True)
+                banner_position = gr.Radio(
+                    label="Banner Position",
+                    choices=["top", "bottom"],
+                    value="bottom",
+                    elem_id="lora_comparison_banner_pos"
+                )
+
+        with gr.Row():
+            create_grid = gr.Checkbox(
+                label="Create comparison grid",
+                value=True,
+                elem_id="lora_comparison_grid"
+            )
+
+        # Event handlers
+        def update_lora_list():
+            return gr.update(choices=self.get_lora_list())
+
+        def update_model_list():
+            return gr.update(choices=sd_models.checkpoint_tiles(use_short=False))
+
+        def select_all_loras():
+            return gr.update(value=self.get_lora_list())
+
+        def deselect_all_loras():
+            return gr.update(value=[])
+
+        def select_all_models():
+            return gr.update(value=sd_models.checkpoint_tiles(use_short=False))
+
+        def deselect_all_models():
+            return gr.update(value=[])
+
+        def filter_loras(filter_text):
+            if not filter_text:
                 return gr.update(choices=self.get_lora_list())
+            all_loras = self.get_lora_list()
+            filtered = [l for l in all_loras if filter_text.lower() in l.lower()]
+            return gr.update(choices=filtered)
 
-            def update_model_list():
+        def filter_models(filter_text):
+            if not filter_text:
                 return gr.update(choices=sd_models.checkpoint_tiles(use_short=False))
+            all_models = sd_models.checkpoint_tiles(use_short=False)
+            filtered = [m for m in all_models if filter_text.lower() in m.lower()]
+            return gr.update(choices=filtered)
 
-            def select_all_loras():
-                return gr.update(value=self.get_lora_list())
-
-            def deselect_all_loras():
-                return gr.update(value=[])
-
-            def select_all_models():
-                return gr.update(value=sd_models.checkpoint_tiles(use_short=False))
-
-            def deselect_all_models():
-                return gr.update(value=[])
-
-            def filter_loras(filter_text):
-                if not filter_text:
-                    return gr.update(choices=self.get_lora_list())
-                all_loras = self.get_lora_list()
-                filtered = [l for l in all_loras if filter_text.lower() in l.lower()]
-                return gr.update(choices=filtered)
-
-            def filter_models(filter_text):
-                if not filter_text:
-                    return gr.update(choices=sd_models.checkpoint_tiles(use_short=False))
-                all_models = sd_models.checkpoint_tiles(use_short=False)
-                filtered = [m for m in all_models if filter_text.lower() in m.lower()]
-                return gr.update(choices=filtered)
-
-            # Wire up events
-            refresh_loras_btn.click(fn=update_lora_list, outputs=[lora_checkboxes])
-            refresh_models_btn.click(fn=update_model_list, outputs=[model_checkboxes])
-            select_all_loras_btn.click(fn=select_all_loras, outputs=[lora_checkboxes])
-            deselect_all_loras_btn.click(fn=deselect_all_loras, outputs=[lora_checkboxes])
-            select_all_models_btn.click(fn=select_all_models, outputs=[model_checkboxes])
-            deselect_all_models_btn.click(fn=deselect_all_models, outputs=[model_checkboxes])
-            lora_filter.change(fn=filter_loras, inputs=[lora_filter], outputs=[lora_checkboxes])
-            model_filter.change(fn=filter_models, inputs=[model_filter], outputs=[model_checkboxes])
+        # Wire up events
+        refresh_loras_btn.click(fn=update_lora_list, outputs=[lora_checkboxes])
+        refresh_models_btn.click(fn=update_model_list, outputs=[model_checkboxes])
+        select_all_loras_btn.click(fn=select_all_loras, outputs=[lora_checkboxes])
+        deselect_all_loras_btn.click(fn=deselect_all_loras, outputs=[lora_checkboxes])
+        select_all_models_btn.click(fn=select_all_models, outputs=[model_checkboxes])
+        deselect_all_models_btn.click(fn=deselect_all_models, outputs=[model_checkboxes])
+        lora_filter.change(fn=filter_loras, inputs=[lora_filter], outputs=[lora_checkboxes])
+        model_filter.change(fn=filter_models, inputs=[model_filter], outputs=[model_checkboxes])
 
         return [
-            enabled, lora_checkboxes, model_checkboxes, lora_weight,
+            lora_checkboxes, model_checkboxes, lora_weight,
             use_triggers, seed_mode, banner_enabled, banner_position, create_grid
         ]
 
@@ -249,10 +243,11 @@ class Script(scripts.Script):
             print(f"LoRA Comparison: Could not get triggers for {lora_name}: {e}")
         return ""
 
-    def run(self, p, enabled, lora_checkboxes, model_checkboxes, lora_weight,
+    def run(self, p, lora_checkboxes, model_checkboxes, lora_weight,
             use_triggers, seed_mode, banner_enabled, banner_position, create_grid):
 
-        if not enabled or not LORA_AVAILABLE:
+        if not LORA_AVAILABLE:
+            print("LoRA Comparison: LoRA module not available")
             return None
 
         if not lora_checkboxes or not model_checkboxes:
