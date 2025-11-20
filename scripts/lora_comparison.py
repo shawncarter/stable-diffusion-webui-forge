@@ -253,11 +253,11 @@ class Script(scripts.Script):
             use_triggers, seed_mode, banner_enabled, banner_position, create_grid):
 
         if not enabled or not LORA_AVAILABLE:
-            return process_images(p)
+            return None
 
         if not lora_checkboxes or not model_checkboxes:
             print("LoRA Comparison: No LoRAs or models selected")
-            return process_images(p)
+            return None
 
         # Store original settings
         original_prompt = p.prompt

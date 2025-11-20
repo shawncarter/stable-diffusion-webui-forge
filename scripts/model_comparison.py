@@ -205,14 +205,14 @@ class Script(scripts.Script):
     def run(self, p, enabled, model_checkboxes, prompt_batch, seed_mode, fixed_seed,
             banner_enabled, banner_position, banner_font_size, create_grid, grid_columns):
 
-        # If not enabled, just return normal processing
+        # If not enabled, return None to allow normal processing
         if not enabled:
-            return process_images(p)
+            return None
 
         # Validation
         if not model_checkboxes or len(model_checkboxes) == 0:
             print("Model Comparison: No models selected, running normal generation")
-            return process_images(p)
+            return None
 
         # Parse prompts
         prompts = []
@@ -224,7 +224,7 @@ class Script(scripts.Script):
 
         if not prompts:
             print("Model Comparison: No prompts provided, running normal generation")
-            return process_images(p)
+            return None
 
         # Store original settings
         original_checkpoint = opts.sd_model_checkpoint
