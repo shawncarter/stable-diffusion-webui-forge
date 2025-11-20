@@ -344,44 +344,47 @@ class Script(scripts.Script):
         state.job_count = total_iterations
 
         print(f"LoRA Comparison: Testing {len(lora_checkboxes)} LoRAs against {len(model_checkboxes)} models ({total_iterations} total images)")
+        print(f"LoRA Comparison: Loop order - Model outer (load once), LoRA inner (efficient)")
 
         try:
-            # Loop through each LoRA
-            for lora_idx, lora_display_name in enumerate(lora_checkboxes):
+            # Loop through each model first (more efficient - load model once)
+            for model_idx, model_name in enumerate(model_checkboxes):
                 if state.interrupted:
                     break
 
-                # Extract basename for LoRA loading (networks.available_networks uses basename)
-                lora_basename = os.path.basename(lora_display_name)
+                # Get checkpoint info and load model once
+                checkpoint_info = sd_models.get_closet_checkpoint_match(model_name)
+                if checkpoint_info is None:
+                    print(f"  Could not find checkpoint: {model_name}, skipping...")
+                    continue
 
-                # Get activation triggers for this LoRA
-                triggers = ""
-                if use_triggers:
-                    triggers = self.get_lora_triggers(lora_display_name)
-                    if triggers:
-                        print(f"  Using triggers: {triggers[:50]}...")
+                print(f"\nLoading model: {model_name}")
 
-                # Build prompt with LoRA and triggers (use basename for <lora:...>)
-                lora_prompt = f"<lora:{lora_basename}:{lora_weight}>"
-                if triggers:
-                    lora_prompt += f" {triggers}"
-
-                # Loop through each model
-                for model_idx, model_name in enumerate(model_checkboxes):
+                # Loop through each LoRA with this model
+                for lora_idx, lora_display_name in enumerate(lora_checkboxes):
                     if state.interrupted:
                         break
 
                     current_iteration += 1
                     state.job_no = current_iteration
-                    state.job = f"LoRA {lora_idx + 1}/{len(lora_checkboxes)}, Model {model_idx + 1}/{len(model_checkboxes)}"
+                    state.job = f"Model {model_idx + 1}/{len(model_checkboxes)}, LoRA {lora_idx + 1}/{len(lora_checkboxes)}"
 
                     print(f"  [{current_iteration}/{total_iterations}] Testing {lora_display_name} with {model_name}")
 
-                    # Get checkpoint info
-                    checkpoint_info = sd_models.get_closet_checkpoint_match(model_name)
-                    if checkpoint_info is None:
-                        print(f"    Could not find checkpoint: {model_name}, skipping...")
-                        continue
+                    # Extract basename for LoRA loading (networks.available_networks uses basename)
+                    lora_basename = os.path.basename(lora_display_name)
+
+                    # Get activation triggers for this LoRA
+                    triggers = ""
+                    if use_triggers:
+                        triggers = self.get_lora_triggers(lora_display_name)
+                        if triggers:
+                            print(f"    Using triggers: {triggers[:50]}...")
+
+                    # Build prompt with LoRA and triggers (use basename for <lora:...>)
+                    lora_prompt = f"<lora:{lora_basename}:{lora_weight}>"
+                    if triggers:
+                        lora_prompt += f" {triggers}"
 
                     # Create processing copy
                     p_copy = copy(p)
@@ -392,7 +395,7 @@ class Script(scripts.Script):
                     # Set prompt with LoRA
                     p_copy.prompt = f"{original_prompt}, {lora_prompt}" if original_prompt else lora_prompt
 
-                    # Override model
+                    # Override model (already validated above)
                     if not hasattr(p_copy, 'override_settings') or p_copy.override_settings is None:
                         p_copy.override_settings = {}
                     p_copy.override_settings['sd_model_checkpoint'] = checkpoint_info.name
@@ -422,16 +425,21 @@ class Script(scripts.Script):
                             if opts.samples_save and isinstance(img, Image.Image):
                                 # Determine save path based on folder organization
                                 save_path = p.outpath_samples
+                                use_subfolders = False  # Disable date subfolders when organizing
+
                                 if folder_organization == "By LoRA":
                                     lora_folder = sanitize_folder_name(lora_display_name)
                                     save_path = os.path.join(p.outpath_samples, lora_folder)
+                                    use_subfolders = True
                                 elif folder_organization == "By Model":
                                     model_folder = sanitize_folder_name(checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name)
                                     save_path = os.path.join(p.outpath_samples, model_folder)
+                                    use_subfolders = True
                                 elif folder_organization == "By LoRA/Model":
                                     lora_folder = sanitize_folder_name(lora_display_name)
                                     model_folder = sanitize_folder_name(checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name)
                                     save_path = os.path.join(p.outpath_samples, lora_folder, model_folder)
+                                    use_subfolders = True
 
                                 images.save_image(
                                     img,
@@ -441,7 +449,8 @@ class Script(scripts.Script):
                                     p_copy.prompt,
                                     opts.samples_format,
                                     info=infotext,
-                                    p=p
+                                    p=p,
+                                    save_to_dirs=False if use_subfolders else None  # Disable date folders when using organization
                                 )
 
                             all_images.append(img)
@@ -462,8 +471,9 @@ class Script(scripts.Script):
         if create_grid and len(all_images) >= 4:
             print(f"LoRA Comparison: Creating comparison grid with {len(all_images)} images...")
             try:
-                grid = images.image_grid(all_images, rows=None)
-                print(f"LoRA Comparison: Grid created, size: {grid.size}, mode: {grid.mode}")
+                # Grid layout: rows = models, columns = loras
+                grid = images.image_grid(all_images, rows=len(model_checkboxes))
+                print(f"LoRA Comparison: Grid created ({len(model_checkboxes)} models × {len(lora_checkboxes)} LoRAs), size: {grid.size}, mode: {grid.mode}")
 
                 grid_infotext = f"LoRA Comparison Grid: {len(lora_checkboxes)} LoRAs x {len(model_checkboxes)} models"
 

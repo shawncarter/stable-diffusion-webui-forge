@@ -373,16 +373,21 @@ class Script(scripts.Script):
                             if opts.samples_save and isinstance(img, Image.Image):
                                 # Determine save path based on folder organization
                                 save_path = p.outpath_samples
+                                use_subfolders = False  # Disable date subfolders when organizing
+
                                 if folder_organization == "By Model":
                                     model_folder = sanitize_folder_name(checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name)
                                     save_path = os.path.join(p.outpath_samples, model_folder)
+                                    use_subfolders = True
                                 elif folder_organization == "By Prompt":
                                     prompt_folder = sanitize_folder_name(prompt[:50])  # Limit prompt length
                                     save_path = os.path.join(p.outpath_samples, prompt_folder)
+                                    use_subfolders = True
                                 elif folder_organization == "By Model/Prompt":
                                     model_folder = sanitize_folder_name(checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name)
                                     prompt_folder = sanitize_folder_name(prompt[:50])
                                     save_path = os.path.join(p.outpath_samples, model_folder, prompt_folder)
+                                    use_subfolders = True
 
                                 images.save_image(
                                     img,
@@ -392,7 +397,8 @@ class Script(scripts.Script):
                                     prompt,
                                     opts.samples_format,
                                     info=infotext,
-                                    p=p
+                                    p=p,
+                                    save_to_dirs=False if use_subfolders else None  # Disable date folders when using organization
                                 )
                                 print(f"    Saved bannered image to {save_path}")
 
@@ -416,8 +422,9 @@ class Script(scripts.Script):
         if create_grid and len(all_images) >= 4:
             print(f"Model Comparison: Creating comparison grid with {len(all_images)} images...")
             try:
-                grid = images.image_grid(all_images, rows=None)
-                print(f"Model Comparison: Grid created, size: {grid.size}, mode: {grid.mode}")
+                # Grid layout: rows = models, columns = prompts
+                grid = images.image_grid(all_images, rows=len(model_checkboxes))
+                print(f"Model Comparison: Grid created ({len(model_checkboxes)} models × {len(prompts)} prompts), size: {grid.size}, mode: {grid.mode}")
 
                 grid_infotext = f"Model Comparison Grid: {len(model_checkboxes)} models x {len(prompts)} prompts"
 
