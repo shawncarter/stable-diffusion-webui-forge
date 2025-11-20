@@ -154,6 +154,14 @@ options_templates.update(options_section(('API', "API", "system"), {
     "api_useragent": OptionInfo("", "User agent for requests", restrict_api=True),
 }))
 
+options_templates.update(options_section(('paths', "Custom Paths", "system"), {
+    "custom_ckpt_dir": OptionInfo("", "Checkpoints directory", component_args=hide_dirs).info("Path to directory with Stable Diffusion checkpoints. Leave empty to use default. Requires restart.").needs_reload_ui(),
+    "custom_lora_dir": OptionInfo("", "LoRA directory", component_args=hide_dirs).info("Path to directory with LoRA networks. Leave empty to use default. Requires restart.").needs_reload_ui(),
+    "custom_embeddings_dir": OptionInfo("", "Embeddings directory", component_args=hide_dirs).info("Path to directory with textual inversion embeddings. Leave empty to use default. Requires restart.").needs_reload_ui(),
+    "custom_hypernetwork_dir": OptionInfo("", "Hypernetwork directory", component_args=hide_dirs).info("Path to directory with hypernetwork files. Leave empty to use default. Requires restart.").needs_reload_ui(),
+    "custom_vae_dir": OptionInfo("", "VAE directory", component_args=hide_dirs).info("Path to directory with VAE files. Leave empty to use default. Requires restart.").needs_reload_ui(),
+}))
+
 options_templates.update(options_section(('training', "Training", "training"), {
     "unload_models_when_training": OptionInfo(False, "Move VAE and CLIP to RAM when training if possible. Saves VRAM."),
     "pin_memory": OptionInfo(False, "Turn on pin_memory for DataLoader. Makes training slightly faster but can increase memory usage."),
