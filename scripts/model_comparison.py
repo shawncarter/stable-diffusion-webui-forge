@@ -337,16 +337,30 @@ class Script(scripts.Script):
                                 else:
                                     print(f"    WARNING: Image is not a PIL Image, cannot add banner!")
 
-                            all_images.append(img)
-                            all_prompts.append(prompt)
-                            all_seeds.append(processed.seed if hasattr(processed, 'seed') else p_copy.seed)
-
                             # Create infotext
                             infotext = f"Model: {checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name}\n"
                             if hasattr(processed, 'infotexts') and img_idx < len(processed.infotexts):
                                 infotext += processed.infotexts[img_idx]
                             elif hasattr(processed, 'info'):
                                 infotext += processed.info
+
+                            # Save the bannered image to disk
+                            if p.save_samples() and isinstance(img, Image.Image):
+                                images.save_image(
+                                    img,
+                                    p.outpath_samples,
+                                    "",
+                                    processed.seed if hasattr(processed, 'seed') else p_copy.seed,
+                                    prompt,
+                                    opts.samples_format,
+                                    info=infotext,
+                                    p=p
+                                )
+                                print(f"    Saved bannered image to {p.outpath_samples}")
+
+                            all_images.append(img)
+                            all_prompts.append(prompt)
+                            all_seeds.append(processed.seed if hasattr(processed, 'seed') else p_copy.seed)
                             all_infotexts.append(infotext)
 
                     except Exception as e:
@@ -366,10 +380,28 @@ class Script(scripts.Script):
             try:
                 grid = images.image_grid(all_images, rows=None)
                 print(f"Model Comparison: Grid created, size: {grid.size}, mode: {grid.mode}")
+
+                grid_infotext = f"Model Comparison Grid: {len(model_checkboxes)} models x {len(prompts)} prompts"
+
+                # Save grid to disk if saving is enabled
+                if opts.grid_save and p.save_samples():
+                    images.save_image(
+                        grid,
+                        p.outpath_grids,
+                        "model_comparison_grid",
+                        all_seeds[0] if all_seeds else -1,
+                        all_prompts[0] if all_prompts else p.prompt,
+                        opts.grid_format,
+                        info=grid_infotext,
+                        p=p,
+                        grid=True
+                    )
+                    print(f"Model Comparison: Grid saved to {p.outpath_grids}")
+
                 all_images.insert(0, grid)
                 all_prompts.insert(0, "Comparison Grid")
                 all_seeds.insert(0, -1)
-                all_infotexts.insert(0, f"Model Comparison Grid: {len(model_checkboxes)} models x {len(prompts)} prompts")
+                all_infotexts.insert(0, grid_infotext)
                 print(f"Model Comparison: Grid inserted at position 0, total images now: {len(all_images)}")
             except Exception as e:
                 print(f"Model Comparison: Error creating grid: {e}")

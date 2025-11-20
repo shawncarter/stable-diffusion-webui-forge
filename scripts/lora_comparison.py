@@ -388,14 +388,27 @@ class Script(scripts.Script):
                                 model_display = checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name
                                 img = add_lora_banner(img, lora_display, model_display, position=banner_position)
 
-                            all_images.append(img)
-                            all_prompts.append(p_copy.prompt)
-                            all_seeds.append(processed.seed if hasattr(processed, 'seed') else p_copy.seed)
-
                             infotext = f"LoRA: {lora_display_name} (weight: {lora_weight})\n"
                             infotext += f"Model: {checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name}\n"
                             if hasattr(processed, 'infotexts') and img_idx < len(processed.infotexts):
                                 infotext += processed.infotexts[img_idx]
+
+                            # Save the bannered image to disk
+                            if p.save_samples() and isinstance(img, Image.Image):
+                                images.save_image(
+                                    img,
+                                    p.outpath_samples,
+                                    "",
+                                    processed.seed if hasattr(processed, 'seed') else p_copy.seed,
+                                    p_copy.prompt,
+                                    opts.samples_format,
+                                    info=infotext,
+                                    p=p
+                                )
+
+                            all_images.append(img)
+                            all_prompts.append(p_copy.prompt)
+                            all_seeds.append(processed.seed if hasattr(processed, 'seed') else p_copy.seed)
                             all_infotexts.append(infotext)
 
                     except Exception as e:
@@ -413,10 +426,28 @@ class Script(scripts.Script):
             try:
                 grid = images.image_grid(all_images, rows=None)
                 print(f"LoRA Comparison: Grid created, size: {grid.size}, mode: {grid.mode}")
+
+                grid_infotext = f"LoRA Comparison Grid: {len(lora_checkboxes)} LoRAs x {len(model_checkboxes)} models"
+
+                # Save grid to disk if saving is enabled
+                if opts.grid_save and p.save_samples():
+                    images.save_image(
+                        grid,
+                        p.outpath_grids,
+                        "lora_comparison_grid",
+                        all_seeds[0] if all_seeds else -1,
+                        all_prompts[0] if all_prompts else p.prompt,
+                        opts.grid_format,
+                        info=grid_infotext,
+                        p=p,
+                        grid=True
+                    )
+                    print(f"LoRA Comparison: Grid saved to {p.outpath_grids}")
+
                 all_images.insert(0, grid)
                 all_prompts.insert(0, "LoRA Comparison Grid")
                 all_seeds.insert(0, -1)
-                all_infotexts.insert(0, f"LoRA Comparison Grid: {len(lora_checkboxes)} LoRAs x {len(model_checkboxes)} models")
+                all_infotexts.insert(0, grid_infotext)
                 print(f"LoRA Comparison: Grid inserted at position 0, total images now: {len(all_images)}")
             except Exception as e:
                 print(f"LoRA Comparison: Error creating grid: {e}")
