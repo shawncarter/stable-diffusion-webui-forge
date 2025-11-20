@@ -393,8 +393,8 @@ class Script(scripts.Script):
                             if hasattr(processed, 'infotexts') and img_idx < len(processed.infotexts):
                                 infotext += processed.infotexts[img_idx]
 
-                            # Save the bannered image to disk
-                            if p.save_samples() and isinstance(img, Image.Image):
+                            # Save the bannered image to disk (always save comparison results)
+                            if opts.samples_save and isinstance(img, Image.Image):
                                 images.save_image(
                                     img,
                                     p.outpath_samples,
@@ -429,8 +429,8 @@ class Script(scripts.Script):
 
                 grid_infotext = f"LoRA Comparison Grid: {len(lora_checkboxes)} LoRAs x {len(model_checkboxes)} models"
 
-                # Save grid to disk if saving is enabled
-                if opts.grid_save and p.save_samples():
+                # Save grid to disk if grid saving is enabled
+                if opts.grid_save:
                     images.save_image(
                         grid,
                         p.outpath_grids,
