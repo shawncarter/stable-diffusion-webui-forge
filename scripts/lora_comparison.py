@@ -26,6 +26,20 @@ except:
     print("LoRA Comparison: Could not import LoRA networks module")
 
 
+def sanitize_folder_name(name):
+    """Sanitize a string to be used as a folder name"""
+    # Remove or replace invalid characters
+    invalid_chars = '<>:"/\\|?*'
+    for char in invalid_chars:
+        name = name.replace(char, '_')
+    # Remove leading/trailing spaces and dots
+    name = name.strip('. ')
+    # Limit length
+    if len(name) > 100:
+        name = name[:100]
+    return name if name else "untitled"
+
+
 def add_lora_banner(image, lora_name, model_name, position="bottom", font_size=None, padding=10):
     """Add banner with LoRA and model name to image"""
     img = image.copy()
@@ -181,6 +195,15 @@ class Script(scripts.Script):
                 elem_id="lora_comparison_grid"
             )
 
+        with gr.Row():
+            folder_organization = gr.Radio(
+                label="Folder Organization",
+                choices=["Flat (all in one folder)", "By LoRA", "By Model", "By LoRA/Model"],
+                value="Flat (all in one folder)",
+                elem_id="lora_comparison_folder_org"
+            )
+            gr.HTML("<p><small>Organize saved images into subfolders for easier review</small></p>")
+
         # Event handlers
         def update_lora_list():
             return gr.update(choices=self.get_lora_list())
@@ -238,7 +261,8 @@ class Script(scripts.Script):
 
         return [
             lora_checkboxes, model_checkboxes, lora_weight,
-            use_triggers, seed_mode, banner_enabled, banner_position, create_grid
+            use_triggers, seed_mode, banner_enabled, banner_position, create_grid,
+            folder_organization
         ]
 
     def get_lora_list(self):
@@ -290,7 +314,8 @@ class Script(scripts.Script):
         return ""
 
     def run(self, p, lora_checkboxes, model_checkboxes, lora_weight,
-            use_triggers, seed_mode, banner_enabled, banner_position, create_grid):
+            use_triggers, seed_mode, banner_enabled, banner_position, create_grid,
+            folder_organization):
 
         if not LORA_AVAILABLE:
             print("LoRA Comparison: LoRA module not available")
@@ -395,9 +420,22 @@ class Script(scripts.Script):
 
                             # Save the bannered image to disk (always save comparison results)
                             if opts.samples_save and isinstance(img, Image.Image):
+                                # Determine save path based on folder organization
+                                save_path = p.outpath_samples
+                                if folder_organization == "By LoRA":
+                                    lora_folder = sanitize_folder_name(lora_display_name)
+                                    save_path = os.path.join(p.outpath_samples, lora_folder)
+                                elif folder_organization == "By Model":
+                                    model_folder = sanitize_folder_name(checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name)
+                                    save_path = os.path.join(p.outpath_samples, model_folder)
+                                elif folder_organization == "By LoRA/Model":
+                                    lora_folder = sanitize_folder_name(lora_display_name)
+                                    model_folder = sanitize_folder_name(checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name)
+                                    save_path = os.path.join(p.outpath_samples, lora_folder, model_folder)
+
                                 images.save_image(
                                     img,
-                                    p.outpath_samples,
+                                    save_path,
                                     "",
                                     processed.seed if hasattr(processed, 'seed') else p_copy.seed,
                                     p_copy.prompt,

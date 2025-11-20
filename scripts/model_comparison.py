@@ -18,6 +18,20 @@ from modules.images import get_font
 from modules.ui_components import ToolButton
 
 
+def sanitize_folder_name(name):
+    """Sanitize a string to be used as a folder name"""
+    # Remove or replace invalid characters
+    invalid_chars = '<>:"/\\|?*'
+    for char in invalid_chars:
+        name = name.replace(char, '_')
+    # Remove leading/trailing spaces and dots
+    name = name.strip('. ')
+    # Limit length
+    if len(name) > 100:
+        name = name[:100]
+    return name if name else "untitled"
+
+
 def add_model_banner(image, model_name, position="bottom", font_size=None, padding=10,
                      bg_color=(0, 0, 0, 200), text_color=(255, 255, 255, 255)):
     """
@@ -189,6 +203,15 @@ class Script(scripts.Script):
                 elem_id=self.elem_id("grid_cols")
             )
 
+        with gr.Row():
+            folder_organization = gr.Radio(
+                label="Folder Organization",
+                choices=["Flat (all in one folder)", "By Model", "By Prompt", "By Model/Prompt"],
+                value="Flat (all in one folder)",
+                elem_id=self.elem_id("folder_org")
+            )
+            gr.HTML("<p><small>Organize saved images into subfolders for easier review</small></p>")
+
         # Event handlers
         def update_model_list():
             return gr.update(choices=sd_models.checkpoint_tiles(use_short=False))
@@ -219,11 +242,13 @@ class Script(scripts.Script):
 
         return [
             model_checkboxes, prompt_batch, seed_mode, fixed_seed,
-            banner_enabled, banner_position, banner_font_size, create_grid, grid_columns
+            banner_enabled, banner_position, banner_font_size, create_grid, grid_columns,
+            folder_organization
         ]
 
     def run(self, p, model_checkboxes, prompt_batch, seed_mode, fixed_seed,
-            banner_enabled, banner_position, banner_font_size, create_grid, grid_columns):
+            banner_enabled, banner_position, banner_font_size, create_grid, grid_columns,
+            folder_organization):
 
         # Validation
         if not model_checkboxes or len(model_checkboxes) == 0:
@@ -346,9 +371,22 @@ class Script(scripts.Script):
 
                             # Save the bannered image to disk (always save comparison results)
                             if opts.samples_save and isinstance(img, Image.Image):
+                                # Determine save path based on folder organization
+                                save_path = p.outpath_samples
+                                if folder_organization == "By Model":
+                                    model_folder = sanitize_folder_name(checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name)
+                                    save_path = os.path.join(p.outpath_samples, model_folder)
+                                elif folder_organization == "By Prompt":
+                                    prompt_folder = sanitize_folder_name(prompt[:50])  # Limit prompt length
+                                    save_path = os.path.join(p.outpath_samples, prompt_folder)
+                                elif folder_organization == "By Model/Prompt":
+                                    model_folder = sanitize_folder_name(checkpoint_info.short_title if hasattr(checkpoint_info, 'short_title') else model_name)
+                                    prompt_folder = sanitize_folder_name(prompt[:50])
+                                    save_path = os.path.join(p.outpath_samples, model_folder, prompt_folder)
+
                                 images.save_image(
                                     img,
-                                    p.outpath_samples,
+                                    save_path,
                                     "",
                                     processed.seed if hasattr(processed, 'seed') else p_copy.seed,
                                     prompt,
@@ -356,7 +394,7 @@ class Script(scripts.Script):
                                     info=infotext,
                                     p=p
                                 )
-                                print(f"    Saved bannered image to {p.outpath_samples}")
+                                print(f"    Saved bannered image to {save_path}")
 
                             all_images.append(img)
                             all_prompts.append(prompt)
