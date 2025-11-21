@@ -347,20 +347,23 @@ class Script(scripts.Script):
         print(f"LoRA Comparison: Loop order - Model outer (load once), LoRA inner (efficient)")
 
         try:
-            # Loop through each model first (more efficient - load model once)
+            # Loop through each model first (more efficient - load model once per model)
             for model_idx, model_name in enumerate(model_checkboxes):
                 if state.interrupted:
                     break
 
-                # Get checkpoint info and load model once
+                # Get checkpoint info
                 checkpoint_info = sd_models.get_closet_checkpoint_match(model_name)
                 if checkpoint_info is None:
                     print(f"  Could not find checkpoint: {model_name}, skipping...")
                     continue
 
-                print(f"\nLoading model: {model_name}")
+                # EXPLICITLY load model once at start of outer loop - not via override_settings
+                print(f"\n[Model {model_idx + 1}/{len(model_checkboxes)}] Loading model: {checkpoint_info.short_title}")
+                sd_models.reload_model_weights(info=checkpoint_info)
+                print(f"  Model loaded successfully")
 
-                # Loop through each LoRA with this model
+                # Loop through each LoRA with this model (model stays loaded)
                 for lora_idx, lora_display_name in enumerate(lora_checkboxes):
                     if state.interrupted:
                         break
@@ -369,7 +372,7 @@ class Script(scripts.Script):
                     state.job_no = current_iteration
                     state.job = f"Model {model_idx + 1}/{len(model_checkboxes)}, LoRA {lora_idx + 1}/{len(lora_checkboxes)}"
 
-                    print(f"  [{current_iteration}/{total_iterations}] Testing {lora_display_name} with {model_name}")
+                    print(f"  [{current_iteration}/{total_iterations}] Testing LoRA: {lora_display_name}")
 
                     # Extract basename for LoRA loading (networks.available_networks uses basename)
                     lora_basename = os.path.basename(lora_display_name)
@@ -395,10 +398,8 @@ class Script(scripts.Script):
                     # Set prompt with LoRA
                     p_copy.prompt = f"{original_prompt}, {lora_prompt}" if original_prompt else lora_prompt
 
-                    # Override model (already validated above)
-                    if not hasattr(p_copy, 'override_settings') or p_copy.override_settings is None:
-                        p_copy.override_settings = {}
-                    p_copy.override_settings['sd_model_checkpoint'] = checkpoint_info.name
+                    # NO override_settings for model - model is already loaded above
+                    # This prevents model from being reloaded on every process_images() call
 
                     # Set seed
                     if use_fixed_seed:
