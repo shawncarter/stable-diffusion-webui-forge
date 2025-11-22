@@ -376,6 +376,8 @@ class Script(scripts.Script):
 
                     # Extract basename for LoRA loading (networks.available_networks uses basename)
                     lora_basename = os.path.basename(lora_display_name)
+                    # Get LoRA name without extension to use as trigger word
+                    lora_name_no_ext = os.path.splitext(lora_basename)[0]
 
                     # Get activation triggers for this LoRA
                     triggers = ""
@@ -385,7 +387,8 @@ class Script(scripts.Script):
                             print(f"    Using triggers: {triggers[:50]}...")
 
                     # Build prompt with LoRA and triggers (use basename for <lora:...>)
-                    lora_prompt = f"<lora:{lora_basename}:{lora_weight}>"
+                    # Include LoRA name as trigger word (usually the activation trigger)
+                    lora_prompt = f"<lora:{lora_basename}:{lora_weight}> {lora_name_no_ext}"
                     if triggers:
                         lora_prompt += f" {triggers}"
 
