@@ -132,12 +132,17 @@ class Script(scripts.Script):
                     deselect_all_loras_btn = gr.Button("Deselect All", size="sm")
                     refresh_loras_btn = ToolButton(value="\U0001f504", elem_id="lora_comparison_refresh_loras")
 
-                use_triggers = gr.Checkbox(
-                    label="Use activation triggers from LoRA metadata",
-                    value=True,
-                    elem_id="lora_comparison_use_triggers"
+                trigger_mode = gr.Radio(
+                    label="Trigger Word Mode",
+                    choices=[
+                        "Prompt only",
+                        "Prompt + LoRA name",
+                        "Prompt + LoRA name + metadata triggers"
+                    ],
+                    value="Prompt + LoRA name",
+                    elem_id="lora_comparison_trigger_mode"
                 )
-                gr.HTML("<p><small>If enabled, will automatically add activation text from LoRA metadata to prompts</small></p>")
+                gr.HTML("<p><small>Choose what to include in the prompt beyond your base prompt</small></p>")
 
             with gr.Column(scale=2):
                 gr.HTML("<h4>Select Checkpoint Models</h4>")
@@ -261,7 +266,7 @@ class Script(scripts.Script):
 
         return [
             lora_checkboxes, model_checkboxes, lora_weight,
-            use_triggers, seed_mode, banner_enabled, banner_position, create_grid,
+            trigger_mode, seed_mode, banner_enabled, banner_position, create_grid,
             folder_organization
         ]
 
@@ -314,7 +319,7 @@ class Script(scripts.Script):
         return ""
 
     def run(self, p, lora_checkboxes, model_checkboxes, lora_weight,
-            use_triggers, seed_mode, banner_enabled, banner_position, create_grid,
+            trigger_mode, seed_mode, banner_enabled, banner_position, create_grid,
             folder_organization):
 
         if not LORA_AVAILABLE:
@@ -379,18 +384,24 @@ class Script(scripts.Script):
                     # Get LoRA name without extension to use as trigger word
                     lora_name_no_ext = os.path.splitext(lora_basename)[0]
 
-                    # Get activation triggers for this LoRA
-                    triggers = ""
-                    if use_triggers:
+                    # Build prompt based on trigger mode
+                    lora_prompt = f"<lora:{lora_basename}:{lora_weight}>"
+
+                    if trigger_mode == "Prompt + LoRA name":
+                        # Include LoRA name as trigger word (usually the activation trigger)
+                        lora_prompt += f" {lora_name_no_ext}"
+                        print(f"    Using LoRA name as trigger: {lora_name_no_ext}")
+                    elif trigger_mode == "Prompt + LoRA name + metadata triggers":
+                        # Include LoRA name plus any metadata triggers
+                        lora_prompt += f" {lora_name_no_ext}"
                         triggers = self.get_lora_triggers(lora_display_name)
                         if triggers:
-                            print(f"    Using triggers: {triggers[:50]}...")
-
-                    # Build prompt with LoRA and triggers (use basename for <lora:...>)
-                    # Include LoRA name as trigger word (usually the activation trigger)
-                    lora_prompt = f"<lora:{lora_basename}:{lora_weight}> {lora_name_no_ext}"
-                    if triggers:
-                        lora_prompt += f" {triggers}"
+                            lora_prompt += f" {triggers}"
+                            print(f"    Using LoRA name + metadata triggers: {lora_name_no_ext}, {triggers[:50]}...")
+                        else:
+                            print(f"    Using LoRA name as trigger (no metadata): {lora_name_no_ext}")
+                    else:  # "Prompt only"
+                        print(f"    Using prompt only (no trigger words)")
 
                     # Create processing copy
                     p_copy = copy(p)
