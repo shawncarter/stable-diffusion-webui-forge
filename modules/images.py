@@ -589,7 +589,11 @@ def save_image_with_geninfo(image, geninfo, filename, extension=None, existing_p
         else:
             pnginfo_data = None
 
-        image.save(filename, format=image_format, quality=opts.jpeg_quality, pnginfo=pnginfo_data)
+        # Use maximum compression for PNG to reduce file size while maintaining lossless quality
+        # compress_level=9 provides maximum compression (slowest but smallest file)
+        # optimize=True enables additional optimization passes
+        image.save(filename, format=image_format, quality=opts.jpeg_quality, pnginfo=pnginfo_data,
+                   compress_level=9, optimize=True)
 
     elif extension.lower() in (".jpg", ".jpeg", ".webp"):
         if image.mode == 'RGBA':
